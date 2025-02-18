@@ -2,11 +2,14 @@ import { LucideIcon } from 'lucide-react';
 import * as icons from 'lucide-react';
 import iconNodes from 'lucide-static/icon-nodes.json';
 
+// Cache for Levenshtein distance calculations
 const levenshteinCache = new Map<string, number>();
 const iconNamesCache = new Map<string, string>();
 
+// Common synonyms and related terms for better matching
 const synonymMap: Record<string, string[]> = {
   'id': ['identification', 'number', 'hash', 'fingerprint'],
+  'name': ['person', 'user'],
   'timestamp': ['time', 'date', 'calendar', 'clock'],
   'age': ['years', 'birthday', 'birth', 'baby'],
   'gender': ['sex', 'male', 'female', 'user'],
@@ -40,7 +43,7 @@ function expandTerms(label: string): string[] {
   const stopWords = new Set(['and', 'or', 'the', 'of', 'in', 'to', 'for', 'with', 'on', 'at', 'by', 'from', 'up', 'about', 'than', 'a', 'an']);
   const words = normalizeString(label)
     .split(' ')
-    .filter(word => !stopWords.has(word) && word.length > 1);
+    .filter(word => !stopWords.has(word) && word.length > 1);  // Filter out stop words and single-character terms
 
   const expanded = new Set<string>(words);
   
@@ -50,6 +53,7 @@ function expandTerms(label: string): string[] {
     }
   });
   
+  // Add combined terms only if both words are meaningful
   words.forEach((word, i) => {
     if (i < words.length - 1 && !stopWords.has(words[i + 1])) {
       expanded.add(word + words[i + 1]);
@@ -114,6 +118,7 @@ export const getLabelIcon = (label: string): LucideIcon => {
   const searchTerms = expandTerms(label);
   const iconNames = Object.keys(iconNodes);
   
+  // Score each icon based on matching terms
   const scores = iconNames.map(name => {
     const normalizedName = name.replace(/-/g, '');
     let score = 0;
@@ -126,6 +131,7 @@ export const getLabelIcon = (label: string): LucideIcon => {
     return { name, score };
   });
   
+  // Get best match above threshold
   const bestMatch = scores
     .filter(s => s.score > 0)
     .sort((a, b) => b.score - a.score)[0];
@@ -135,6 +141,7 @@ export const getLabelIcon = (label: string): LucideIcon => {
     return (icons as unknown as { [key: string]: LucideIcon })[pascalName] || icons.MoreHorizontal;
   }
 
+  // Fallback to Levenshtein distance matching
   const closestName = findClosestLevenshtein(normalizeString(label), iconNames);
   if (closestName) {
     const pascalName = kebabToPascalCase(closestName);
@@ -142,4 +149,4 @@ export const getLabelIcon = (label: string): LucideIcon => {
   }
 
   return icons.MoreHorizontal;
-}; 
+};
