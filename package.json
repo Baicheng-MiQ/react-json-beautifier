@@ -30,6 +30,7 @@
     "@radix-ui/react-progress": "^1.1.2",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
+    "fuse.js": "^7.1.0",
     "lucide-react": "^0.344.0",
     "lucide-static": "^0.473.0",
     "tailwind-merge": "^3.0.1"

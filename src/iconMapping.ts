@@ -1,6 +1,7 @@
 import { LucideIcon } from 'lucide-react';
 import * as icons from 'lucide-react';
 import iconNodes from 'lucide-static/icon-nodes.json';
+import Fuse from 'fuse.js';
 
 // Cache for Levenshtein distance calculations
 const levenshteinCache = new Map<string, number>();
@@ -22,7 +23,8 @@ const synonymMap: Record<string, string[]> = {
   'identification': ['identity', 'id', 'profile'],
   'party': ['group', 'political', 'vote'],
   'liberal': ['political', 'party', 'vote'],
-  'labour': ['political', 'party', 'vote']
+  'labour': ['political', 'party', 'vote'],
+  'song': ['music', 'audio', 'song', 'track', 'album', 'playlist'],
 };
 
 function normalizeString(str: string): string {
@@ -40,10 +42,10 @@ function kebabToPascalCase(str: string): string {
 }
 
 function expandTerms(label: string): string[] {
-  const stopWords = new Set(['and', 'or', 'the', 'of', 'in', 'to', 'for', 'with', 'on', 'at', 'by', 'from', 'up', 'about', 'than', 'a', 'an']);
+  const stopWords = new Set(['and', 'or', 'the', 'of', 'in', 'to', 'for', 'with', 'on', 'at', 'by', 'from', 'up', 'about', 'than', 'a', 'an', 'as', 'but', 'if', 'or', 'because', 'is', 'has', 'hasn\'t', 'wasn\'t', 'until', 'while', 'of', 'at', 'by', 'for', 'with', 'about', 'against', 'between', 'into', 'through', 'during', 'before', 'after', 'above', 'below', 'to', 'from', 'up', 'down', 'in', 'out', 'on', 'off', 'over', 'under', 'again', 'further', 'then', 'once', 'here', 'there', 'when', 'where', 'why', 'how', 'all', 'any', 'some', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten']);
   const words = normalizeString(label)
     .split(' ')
-    .filter(word => !stopWords.has(word) && word.length > 1);  // Filter out stop words and single-character terms
+    .filter(word => !stopWords.has(word) && word.length > 1);
 
   const expanded = new Set<string>(words);
   
@@ -52,100 +54,46 @@ function expandTerms(label: string): string[] {
       synonymMap[word].forEach(synonym => expanded.add(synonym));
     }
   });
-  
-  // Add combined terms only if both words are meaningful
-  words.forEach((word, i) => {
-    if (i < words.length - 1 && !stopWords.has(words[i + 1])) {
-      expanded.add(word + words[i + 1]);
-    }
-  });
-  
   return Array.from(expanded);
 }
 
-function levenshteinDistance(a: string, b: string): number {
-  const cacheKey = `${a}:${b}`;
-  if (levenshteinCache.has(cacheKey)) {
-    return levenshteinCache.get(cacheKey)!;
-  }
+// Initialize Fuse instance with icon names
+const iconNames = Object.keys(iconNodes);
+const fuseInstance = new Fuse(iconNames.map(name => name.replace(/-/g, ' ')), {
+  includeScore: true,
+  threshold: 0.5,
+  distance: 100,
+  minMatchCharLength: 2,
+});
 
-  const matrix = [];
-  for (let i = 0; i <= b.length; i++) matrix[i] = [i];
-  for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
-
-  for (let i = 1; i <= b.length; i++) {
-    for (let j = 1; j <= a.length; j++) {
-      const cost = b.charAt(i - 1) === a.charAt(j - 1) ? 0 : 1;
-      matrix[i][j] = Math.min(
-        matrix[i - 1][j] + 1,
-        matrix[i][j - 1] + 1,
-        matrix[i - 1][j - 1] + cost
-      );
-    }
-  }
-  
-  const result = matrix[b.length][a.length];
-  levenshteinCache.set(cacheKey, result);
-  return result;
-}
-
-function findClosestLevenshtein(label: string, iconNames: string[]): string {
-  const cacheKey = label;
-  if (iconNamesCache.has(cacheKey)) {
-    return iconNamesCache.get(cacheKey)!;
-  }
-
-  const normalizedLabel = label
-    .replace(/[^a-z0-9]/gi, '')
-    .toLowerCase();
-  
-  const closest = iconNames.reduce((closest, current) => {
-    const currentNormalized = current.replace(/-/g, '').toLowerCase();
-    const distance = levenshteinDistance(normalizedLabel, currentNormalized);
-    return distance < closest.distance ? { name: current, distance } : closest;
-  }, { name: '', distance: Infinity });
-
-  const threshold = Math.ceil(
-    Math.max(normalizedLabel.length, closest.name.replace(/-/g, '').length) * 0.5
-  );
-
-  const result = closest.distance <= threshold ? closest.name : '';
-  iconNamesCache.set(cacheKey, result);
-  return result;
-}
+// Cache for icon lookups
+const iconCache = new Map<string, LucideIcon>();
 
 export const getLabelIcon = (label: string): LucideIcon => {
-  const searchTerms = expandTerms(label);
-  const iconNames = Object.keys(iconNodes);
-  
-  // Score each icon based on matching terms
-  const scores = iconNames.map(name => {
-    const normalizedName = name.replace(/-/g, '');
-    let score = 0;
-    
-    searchTerms.forEach(term => {
-      if (normalizedName.includes(term)) score += 1;
-      if (name.split('-').some(part => part === term)) score += 2;
-    });
-    
-    return { name, score };
-  });
-  
-  // Get best match above threshold
-  const bestMatch = scores
-    .filter(s => s.score > 0)
-    .sort((a, b) => b.score - a.score)[0];
-
-  if (bestMatch) {
-    const pascalName = kebabToPascalCase(bestMatch.name);
-    return (icons as unknown as { [key: string]: LucideIcon })[pascalName] || icons.MoreHorizontal;
+  if (iconCache.has(label)) {
+    return iconCache.get(label)!;
   }
 
-  // Fallback to Levenshtein distance matching
-  const closestName = findClosestLevenshtein(normalizeString(label), iconNames);
-  if (closestName) {
-    const pascalName = kebabToPascalCase(closestName);
-    return (icons as unknown as { [key: string]: LucideIcon })[pascalName] || icons.MoreHorizontal;
+  const searchTerms = expandTerms(label);
+  
+  // Try exact matches first
+  const exactMatch = iconNames.find(name => 
+    searchTerms.some(term => name.includes(term))
+  );
+  
+  if (exactMatch) {
+    const icon = (icons as unknown as { [key: string]: LucideIcon })[kebabToPascalCase(exactMatch)];
+    iconCache.set(label, icon);
+    return icon;
+  }
+
+  // Use Fuse.js for fuzzy searching
+  const searchResults = fuseInstance.search(label);
+  if (searchResults.length > 0 && searchResults[0].score! < 0.4) {
+    const bestMatch = searchResults[0].item;
+    const icon = (icons as unknown as { [key: string]: LucideIcon })[kebabToPascalCase(bestMatch)];
+    iconCache.set(label, icon);
+    return icon;
   }
 
   return icons.MoreHorizontal;
