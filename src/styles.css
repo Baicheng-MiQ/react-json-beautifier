@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.json-input {
+  @apply font-mono text-sm;
+}
+
+.json-visualizer {
+  @apply space-y-4 p-6 max-w-4xl mx-auto;
+}
+
+.json-entry {
+  @apply px-2 py-1;
+}
+
+.json-card {
+  @apply bg-white rounded-lg shadow-sm border border-gray-200 p-4 transition-all duration-200;
+}
+
+.json-card:hover {
+  @apply shadow-md;
+}
+
+.type-indicator {
+  @apply text-xs font-medium px-2 py-1 rounded-full;
+}
+
+.fade-enter {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.fade-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 300ms, transform 300ms;
+}
+
+.error-message {
+  @apply text-red-500 text-sm mt-2;
+}
