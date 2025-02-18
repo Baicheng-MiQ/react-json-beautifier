@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ValueRenderer } from './ValueRenderer';
 
 interface JsonVisualizerProps {
@@ -6,16 +6,40 @@ interface JsonVisualizerProps {
 }
 
 export const JsonVisualizer = ({ data }: JsonVisualizerProps) => {
-  const content = useMemo(() => {
-    if (typeof data === 'object' && data !== null) {
-      return Object.entries(data).map(([key, value]) => (
-        <div key={key} className="mb-4">
-          <ValueRenderer label={key} value={value as string | number | boolean | Record<string, unknown> | unknown[]} />
-        </div>
-      ));
+  const [parsedData, setParsedData] = useState<Record<string, unknown> | unknown[] | string | number | boolean | null>(data);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof data === 'string') {
+      try {
+        const trimmedData = data.trim();
+        setParsedData(JSON.parse(trimmedData));
+        setError(null);
+      } catch {
+        console.error("Invalid JSON format");
+        setError("Invalid Data");
+      }
+    } else {
+      setParsedData(data);
+      setError(null);
     }
-    return <ValueRenderer value={data} />;
   }, [data]);
 
-  return <div className="space-y-4">{content}</div>;
-};
+  if (error) {
+    return <div className="text-red-500 text-sm mb-1">{error}</div>;
+  }
+
+  if (typeof parsedData === 'object' && parsedData !== null) {
+    return (
+      <div>
+        {Object.entries(parsedData).map(([key, value]) => (
+          <div key={key} className="mb-4">
+            <ValueRenderer label={key} value={value as string | number | boolean | Record<string, unknown> | unknown[]} />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return null;
+}

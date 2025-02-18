@@ -3,10 +3,6 @@ import * as icons from 'lucide-react';
 import iconNodes from 'lucide-static/icon-nodes.json';
 import Fuse from 'fuse.js';
 
-// Cache for Levenshtein distance calculations
-const levenshteinCache = new Map<string, number>();
-const iconNamesCache = new Map<string, string>();
-
 // Common synonyms and related terms for better matching
 const synonymMap: Record<string, string[]> = {
   'id': ['identification', 'number', 'hash', 'fingerprint'],
