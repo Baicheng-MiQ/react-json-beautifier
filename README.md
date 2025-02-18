@@ -1,6 +1,7 @@
 # React JSON Beautifier
 
 A beautiful React component for visualizing JSON data with smart type detection and icons.
+<img width="1155" alt="image" src="https://github.com/user-attachments/assets/2fc21211-137e-44ab-93b4-0660b9d503f0" />
 
 ## Features
 
