@@ -14,7 +14,7 @@ const LazyValueRenderer = lazy(() =>
 );
 
 // A simple key-value entry component for virtualization
-const Entry = React.memo(({ index, style, data }: { index: number, style: React.CSSProperties, data: [string, unknown][] }) => {
+const Entry = ({ index, style, data }: { index: number, style: React.CSSProperties, data: [string, unknown][] }) => {
   const [key, value] = data[index];
   return (
     <div style={style} className="mb-4">
@@ -23,9 +23,10 @@ const Entry = React.memo(({ index, style, data }: { index: number, style: React.
       </Suspense>
     </div>
   );
-});
+};
 
-export const JsonVisualizer = React.memo(({ data }: JsonVisualizerProps) => {
+// Define the component without memo for now
+export function JsonVisualizer({ data }: JsonVisualizerProps) {
   const [parsedData, setParsedData] = useState<Record<string, unknown> | unknown[] | string | number | boolean | null>(data);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -103,4 +104,4 @@ export const JsonVisualizer = React.memo(({ data }: JsonVisualizerProps) => {
   }
 
   return null;
-});
+}
