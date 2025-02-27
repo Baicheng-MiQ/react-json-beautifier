@@ -1,6 +1,6 @@
 {
   "name": "react-json-beautifier",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A beautiful React component for visualizing JSON data with smart type detection and icons",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
