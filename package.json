@@ -1,6 +1,6 @@
 {
   "name": "react-json-beautifier",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A beautiful React component for visualizing JSON data with smart type detection and icons",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -23,8 +23,8 @@
   "author": "",
   "license": "MIT",
   "peerDependencies": {
-    "react": "^16.8.0 || ^17.0.0 || ^18.0.0",
-    "react-dom": "^16.8.0 || ^17.0.0 || ^18.0.0"
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   },
   "dependencies": {
     "@radix-ui/react-progress": "^1.1.2",
@@ -33,11 +33,13 @@
     "fuse.js": "^7.1.0",
     "lucide-react": "^0.473.0",
     "lucide-static": "^0.473.0",
+    "react-window": "^1.8.11",
     "tailwind-merge": "^3.0.1"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
+    "@types/react-window": "^1.8.8",
     "autoprefixer": "^10.4.20",
     "eslint": "^9.20.0",
     "postcss": "^8.5.2",

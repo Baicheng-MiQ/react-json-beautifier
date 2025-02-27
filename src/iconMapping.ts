@@ -23,6 +23,9 @@ const synonymMap: Record<string, string[]> = {
   'song': ['music', 'audio', 'song', 'track', 'album', 'playlist'],
 };
 
+// Pre-process stop words once
+const stopWords = new Set(['and', 'or', 'the', 'of', 'in', 'to', 'for', 'with', 'on', 'at', 'by', 'from', 'up', 'about', 'than', 'a', 'an', 'as', 'but', 'if', 'or', 'because', 'is', 'has', 'hasn\'t', 'wasn\'t', 'until', 'while', 'of', 'at', 'by', 'for', 'with', 'about', 'against', 'between', 'into', 'through', 'during', 'before', 'after', 'above', 'below', 'to', 'from', 'up', 'down', 'in', 'out', 'on', 'off', 'over', 'under', 'again', 'further', 'then', 'once', 'here', 'there', 'when', 'where', 'why', 'how', 'all', 'any', 'some', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten']);
+
 function normalizeString(str: string): string {
   return str.toLowerCase()
     .replace(/[^a-z0-9]/g, ' ')
@@ -37,8 +40,15 @@ function kebabToPascalCase(str: string): string {
     .join('');
 }
 
+// Cache for expanded terms to avoid re-processing
+const termsCache = new Map<string, string[]>();
+
 function expandTerms(label: string): string[] {
-  const stopWords = new Set(['and', 'or', 'the', 'of', 'in', 'to', 'for', 'with', 'on', 'at', 'by', 'from', 'up', 'about', 'than', 'a', 'an', 'as', 'but', 'if', 'or', 'because', 'is', 'has', 'hasn\'t', 'wasn\'t', 'until', 'while', 'of', 'at', 'by', 'for', 'with', 'about', 'against', 'between', 'into', 'through', 'during', 'before', 'after', 'above', 'below', 'to', 'from', 'up', 'down', 'in', 'out', 'on', 'off', 'over', 'under', 'again', 'further', 'then', 'once', 'here', 'there', 'when', 'where', 'why', 'how', 'all', 'any', 'some', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten']);
+  // Use cached results if available
+  if (termsCache.has(label)) {
+    return termsCache.get(label)!;
+  }
+  
   const words = normalizeString(label)
     .split(' ')
     .filter(word => !stopWords.has(word) && word.length > 1);
@@ -50,7 +60,11 @@ function expandTerms(label: string): string[] {
       synonymMap[word].forEach(synonym => expanded.add(synonym));
     }
   });
-  return Array.from(expanded);
+  
+  const result = Array.from(expanded);
+  // Cache the result
+  termsCache.set(label, result);
+  return result;
 }
 
 // Initialize Fuse instance with icon names
@@ -65,32 +79,53 @@ const fuseInstance = new Fuse(iconNames.map(name => name.replace(/-/g, ' ')), {
 // Cache for icon lookups
 const iconCache = new Map<string, LucideIcon>();
 
+// Pre-process common icon mappings for faster lookups
+const defaultIcon = icons.MoreHorizontal;
+
+// Pre-compute icon components by name for faster lookup
+const iconComponentMap = new Map<string, LucideIcon>();
+iconNames.forEach(name => {
+  const pascalName = kebabToPascalCase(name);
+  if ((icons as unknown as { [key: string]: LucideIcon })[pascalName]) {
+    iconComponentMap.set(name, (icons as unknown as { [key: string]: LucideIcon })[pascalName]);
+  }
+});
+
 export const getLabelIcon = (label: string): LucideIcon => {
+  // Fast path: cache hit
   if (iconCache.has(label)) {
     return iconCache.get(label)!;
+  }
+
+  // For very short labels, just return default icon to avoid processing
+  if (label.length < 2) {
+    iconCache.set(label, defaultIcon);
+    return defaultIcon;
   }
 
   const searchTerms = expandTerms(label);
   
   // Try exact matches first
-  const exactMatch = iconNames.find(name => 
-    searchTerms.some(term => name.includes(term))
-  );
-  
-  if (exactMatch) {
-    const icon = (icons as unknown as { [key: string]: LucideIcon })[kebabToPascalCase(exactMatch)];
-    iconCache.set(label, icon);
-    return icon;
+  for (const term of searchTerms) {
+    for (const name of iconNames) {
+      if (name.includes(term)) {
+        const icon = iconComponentMap.get(name) || defaultIcon;
+        iconCache.set(label, icon);
+        return icon;
+      }
+    }
   }
 
-  // Use Fuse.js for fuzzy searching
+  // Use Fuse.js for fuzzy searching only if needed
   const searchResults = fuseInstance.search(label);
   if (searchResults.length > 0 && searchResults[0].score! < 0.4) {
     const bestMatch = searchResults[0].item;
-    const icon = (icons as unknown as { [key: string]: LucideIcon })[kebabToPascalCase(bestMatch)];
+    const icon = iconComponentMap.get(bestMatch.replace(/\s/g, '-')) || defaultIcon;
     iconCache.set(label, icon);
     return icon;
   }
 
-  return icons.MoreHorizontal;
+  // Default icon as fallback
+  iconCache.set(label, defaultIcon);
+  return defaultIcon;
 };
